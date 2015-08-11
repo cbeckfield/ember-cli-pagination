@@ -78,25 +78,44 @@ export default Ember.ArrayProxy.extend(PageMixin, Ember.Evented, ArrayProxyPromi
     return res;
   },
 
+  loading: false,
+
   fetchContent: function() {
-    var res = this.rawFindFromStore();
-    this.incrementProperty("numRemoteCalls");
-    var me = this;
+    // Loading spinner
+    this.set('loading', true);
 
-    res.then(function(rows) {
-      var metaObj = ChangeMeta.create({paramMapping: me.get('paramMapping'),
-                                       meta: rows.meta,
-                                       page: me.getPage(),
-                                       perPage: me.getPerPage()});
+        var store = this.get('store');
+        var modelName = this.get('modelName');
 
-      return me.set("meta", metaObj.make());
+        var ops = this.get('paramsForBackend');
+        var res = store.find(modelName, ops);
+        this.incrementProperty("numRemoteCalls");
+        var me = this;
 
-    }, function(error) {
-      Util.log("PagedRemoteArray#fetchContent error " + error);
-    });
+        res.then(function(rows) {
+            Util.log("PagedRemoteArray#fetchContent in res.then " + rows);
+            var newMeta = {};
+            var totalPagesField = me.get('paramMapping').total_pages;
+            if (rows.meta) {
+                for (var k in rows.meta) {
+                    newMeta[k] = rows.meta[k];
+                    if (totalPagesField && totalPagesField === k) {
+                        newMeta['total_pages'] = rows.meta[k];
+                    }
+                }
+            }
 
-    return res;
-  },
+            // Unset loading
+            me.set('loading', false);
+            return me.set("meta", newMeta);
+        }, function(error) {
+            // Unset loading
+            me.set('loading', false);
+            Util.log("PagedRemoteArray#fetchContent error " + error);
+        });
+
+        return res;
+    },
 
   totalPagesBinding: "meta.total_pages",
 
