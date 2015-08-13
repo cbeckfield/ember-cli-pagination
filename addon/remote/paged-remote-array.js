@@ -88,7 +88,7 @@ export default Ember.ArrayProxy.extend(PageMixin, Ember.Evented, ArrayProxyPromi
         var modelName = this.get('modelName');
 
         var ops = this.get('paramsForBackend');
-        var res = store.find(modelName, ops);
+        var res = store.query(modelName, ops);
         this.incrementProperty("numRemoteCalls");
         var me = this;
 
